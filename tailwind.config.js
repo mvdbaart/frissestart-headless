@@ -8,14 +8,17 @@ module.exports = {
     extend: {
       colors: {
         primary: {
-          DEFAULT: '#0073aa', // WordPress blue as primary color
-          dark: '#005177',
-          light: '#00a0d2',
+          DEFAULT: '#ff9800', // Main color orange
+          dark: '#e68a00',
+          light: '#ffad33',
         },
         secondary: {
-          DEFAULT: '#46b450', // WordPress green
-          dark: '#328540',
-          light: '#7ad03a',
+          DEFAULT: '#2fb28d', // Secondary color green
+          dark: '#259073',
+          light: '#4dcfaa',
+        },
+        text: {
+          dark: '#1e1f20', // Text color dark for light background
         },
       },
       fontFamily: {

@@ -1,22 +1,81 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import axios from 'axios';
+
+// Standaard pagina's voor als de API niet werkt
+const DEFAULT_PAGES = [
+  { id: 1, slug: 'over-ons', title: { rendered: 'Over Ons' } },
+  { id: 2, slug: 'contact', title: { rendered: 'Contact' } },
+  { id: 3, slug: 'privacy-policy', title: { rendered: 'Privacybeleid' } },
+  { id: 4, slug: 'algemene-voorwaarden', title: { rendered: 'Algemene Voorwaarden' } },
+  { id: 5, slug: 'veelgestelde-vragen', title: { rendered: 'Veelgestelde Vragen' } },
+  { id: 6, slug: 'blog', title: { rendered: 'Blog' } }
+];
+
+// Pagina's die we willen uitsluiten van de footer
+const EXCLUDED_PAGES = ['privacy-policy', 'contact', 'home', 'algemene-voorwaarden'];
 
 const Footer: React.FC = () => {
   const currentYear = new Date().getFullYear();
+  const [pages, setPages] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPages = async () => {
+      setIsLoading(true);
+      try {
+        // Direct ophalen van pagina's van WordPress API
+        const response = await axios.get('https://opleidingen.frissestart.nl/wp-json/wp/v2/pages', {
+          params: {
+            per_page: 100,
+            status: 'publish'
+          }
+        });
+        
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+          // Filter pagina's die we willen tonen in de footer
+          const filteredPages = response.data.filter(page => 
+            !EXCLUDED_PAGES.includes(page.slug)
+          );
+          
+          console.log('Fetched pages:', filteredPages.length);
+          setPages(filteredPages);
+        } else {
+          // Als er geen pagina's zijn gevonden, gebruik de standaard pagina's
+          console.log('No pages found, using default pages');
+          const filteredDefaultPages = DEFAULT_PAGES.filter(page => 
+            !EXCLUDED_PAGES.includes(page.slug)
+          );
+          setPages(filteredDefaultPages);
+        }
+      } catch (error) {
+        console.error('Error fetching pages for footer:', error);
+        // Bij een fout, gebruik de standaard pagina's
+        const filteredDefaultPages = DEFAULT_PAGES.filter(page => 
+          !EXCLUDED_PAGES.includes(page.slug)
+        );
+        setPages(filteredDefaultPages);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPages();
+  }, []);
 
   return (
-    <footer className="bg-gray-800 text-white py-12">
-      <div className="container mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+    <footer className="bg-text-dark text-white py-12">
+      <div className="container mx-auto px-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-xl font-bold mb-4">Frisse Start Opleidingen</h3>
+            <h3 className="text-xl font-bold mb-4 text-white">Frisse Start Opleidingen</h3>
             <p className="text-gray-300">
               Professionele opleidingen en cursussen voor persoonlijke en professionele ontwikkeling.
             </p>
           </div>
           
           <div>
-            <h3 className="text-xl font-bold mb-4">Snelle Links</h3>
+            <h3 className="text-xl font-bold mb-4 text-white">Snelle Links</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/" className="text-gray-300 hover:text-white transition-colors">
@@ -47,7 +106,40 @@ const Footer: React.FC = () => {
           </div>
           
           <div>
-            <h3 className="text-xl font-bold mb-4">Contact</h3>
+            <h3 className="text-xl font-bold mb-4 text-white">Pagina's</h3>
+            <ul className="space-y-2">
+              {isLoading ? (
+                <li className="text-gray-400">Laden van pagina's...</li>
+              ) : pages.length > 0 ? (
+                pages.map(page => (
+                  <li key={page.id}>
+                    <Link 
+                      href={`/${page.slug}`} 
+                      className="text-gray-300 hover:text-white transition-colors"
+                    >
+                      {page.title?.rendered || page.title || page.slug}
+                    </Link>
+                  </li>
+                ))
+              ) : (
+                <>
+                  <li>
+                    <Link href="/veelgestelde-vragen" className="text-gray-300 hover:text-white transition-colors">
+                      Veelgestelde Vragen
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/sitemap" className="text-gray-300 hover:text-white transition-colors">
+                      Sitemap
+                    </Link>
+                  </li>
+                </>
+              )}
+            </ul>
+          </div>
+          
+          <div>
+            <h3 className="text-xl font-bold mb-4 text-white">Contact</h3>
             <address className="not-italic text-gray-300">
               <p>Email: info@frissestart.nl</p>
               <p>Telefoon: +31 (0)12 345 6789</p>
@@ -74,6 +166,15 @@ const Footer: React.FC = () => {
         
         <div className="mt-8 pt-8 border-t border-gray-700 text-center text-gray-400">
           <p>&copy; {currentYear} Frisse Start Opleidingen. Alle rechten voorbehouden.</p>
+          <p className="mt-2">
+            <Link href="/privacy-policy" className="hover:text-white transition-colors">
+              Privacybeleid
+            </Link>
+            {' | '}
+            <Link href="/algemene-voorwaarden" className="hover:text-white transition-colors">
+              Algemene Voorwaarden
+            </Link>
+          </p>
         </div>
       </div>
     </footer>
