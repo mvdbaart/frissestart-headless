@@ -1,6 +1,6 @@
 # Frisse Start Headless WordPress Frontend
 
-This is a modern headless frontend for the WordPress website at https://opleidingen.frissestart.nl. It uses Next.js, React, TypeScript, and TailwindCSS to create a fast, responsive, and user-friendly experience while keeping WordPress as the backend CMS.
+This is a modern headless frontend for the WordPress website at https://opleidingen.frissestart.nl. It uses Next.js, React, TypeScript, and TailwindCSS to create a fast, responsive, and user-friendly experience while keeping WordPress as the backend CMS. Yes
 
 ## Features
 
