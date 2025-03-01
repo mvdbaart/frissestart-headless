@@ -108,23 +108,44 @@ export async function getCourses(): Promise<Course[]> {
         console.log(`Successfully fetched ${response.data.length} courses from primary endpoint`);
         
         // Map de API-response naar onze Course interface
-        return response.data.map((course: any) => ({
-          id: course.id || 0,
-          slug: course.slug || `course-${course.id || 0}`,
-          title: course.title || '',
-          description: course.description || '',
-          image: course.image || null,
-          category: course.category || 'Algemeen',
-          status: course.status || 'open',
-          maxParticipants: course.max_participants || course.maxParticipants || null,
-          currentParticipants: course.current_participants || course.currentParticipants || 0,
-          tijd: course.tijd || null,
-          duration: course.duration || null,
-          startDate: course.start_date || course.startDate || 'Nader te bepalen',
-          location: course.location || course.locatie || 'Online',
-          price: course.price || course.prijs || 'Op aanvraag',
-          soobSubsidie: course.soob_subsidie || course.soobSubsidie || null,
-        }));
+        return response.data.map((course: any) => {
+          // Helper functie om de titel te extraheren
+          const extractTitle = (titleData: any) => {
+            if (typeof titleData === 'object' && titleData.rendered) {
+              return titleData.rendered;
+            }
+            if (typeof titleData === 'string') {
+              return titleData;
+            }
+            return '';
+          };
+
+          // Helper functie om de locatie te formatteren
+          const formatLocation = (loc: any) => {
+            if (!loc) return 'Online';
+            if (typeof loc === 'object' && loc.name) return loc.name;
+            if (typeof loc === 'string') return loc;
+            return 'Online';
+          };
+
+          return {
+            id: course.id || course.ID || 0,
+            slug: course.slug || course.post_name || `course-${course.id || course.ID || 0}`,
+            title: extractTitle(course.title) || course.naam || course.post_title || '',
+            description: course.content?.rendered || course.description || course.post_content || course.beschrijving || '',
+            image: course.featured_image_url || course.image || course.thumbnail || course.afbeelding || null,
+            category: course.category || (course.categories && course.categories[0]?.name) || 'Algemeen',
+            status: course.status || 'open',
+            maxParticipants: course.max_participants || course.maxParticipants || course.maximum_deelnemers || null,
+            currentParticipants: course.current_participants || course.currentParticipants || course.huidige_deelnemers || 0,
+            tijd: course.tijd || course.time || course.aanvangstijd || course.starttijd || null,
+            duration: course.duration || course.duur || course.tijdsduur || null,
+            startDate: course.start_date || course.startDate || course.datum || course.startdatum || 'Nader te bepalen',
+            location: formatLocation(course.location || course.locatie || course.plaats || course.vestiging),
+            price: course.price || course.prijs || course.kosten || course.tarief || 'Op aanvraag',
+            soobSubsidie: course.soob_subsidie || course.soobSubsidie || course.soob || course.subsidie || null,
+          };
+        });
       }
     } catch (error) {
       console.log('Error fetching from primary endpoint:', error);
@@ -367,7 +388,9 @@ export async function getUpcomingCourses(): Promise<Course[]> {
         
         // Sort by date (earliest first)
         return dateA.getTime() - dateB.getTime();
-      });
+      })
+      // Limit to 5 courses
+      .slice(0, 5);
     
     return upcomingCourses;
   } catch (error) {
