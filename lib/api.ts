@@ -1,9 +1,21 @@
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 
 // WordPress API URL
 const WP_API_URL = 'https://opleidingen.frissestart.nl/wp-json/wp/v2';
 const CUSTOM_API_URL = 'https://opleidingen.frissestart.nl/wp-json/custom/v1';
 const REST_API_URL = 'https://opleidingen.frissestart.nl/wp-json';
+
+// Cache settings
+const CACHE_DIR = path.join(process.cwd(), '.cache');
+const COURSES_CACHE_FILE = path.join(CACHE_DIR, 'courses.json');
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes in milliseconds
+
+// Ensure cache directory exists
+if (!fs.existsSync(CACHE_DIR)) {
+  fs.mkdirSync(CACHE_DIR, { recursive: true });
+}
 
 // Course type definition
 export interface Course {
@@ -88,10 +100,67 @@ export async function getMenuByLocation(location: string) {
 }
 
 /**
+ * Check if cache is valid
+ */
+function isCacheValid(): boolean {
+  try {
+    if (!fs.existsSync(COURSES_CACHE_FILE)) {
+      return false;
+    }
+
+    const stats = fs.statSync(COURSES_CACHE_FILE);
+    const now = new Date().getTime();
+    const modifiedTime = stats.mtime.getTime();
+
+    return now - modifiedTime < CACHE_DURATION;
+  } catch (error) {
+    console.error('Error checking cache validity:', error);
+    return false;
+  }
+}
+
+/**
+ * Read courses from cache
+ */
+function readCoursesFromCache(): Course[] | null {
+  try {
+    if (!isCacheValid()) {
+      return null;
+    }
+
+    const cacheData = fs.readFileSync(COURSES_CACHE_FILE, 'utf-8');
+    return JSON.parse(cacheData);
+  } catch (error) {
+    console.error('Error reading from cache:', error);
+    return null;
+  }
+}
+
+/**
+ * Write courses to cache
+ */
+function writeCoursesToCache(courses: Course[]): void {
+  try {
+    fs.writeFileSync(COURSES_CACHE_FILE, JSON.stringify(courses, null, 2));
+  } catch (error) {
+    console.error('Error writing to cache:', error);
+  }
+}
+
+/**
  * Fetch all courses from the WordPress API
  */
 export async function getCourses(): Promise<Course[]> {
   try {
+    // Check cache first
+    const cachedCourses = readCoursesFromCache();
+    if (cachedCourses) {
+      console.log('Returning courses from cache');
+      return cachedCourses;
+    }
+
+    console.log('Cache invalid or not found, fetching fresh data...');
+    
     // Primaire endpoint voor opleidingen
     const primaryEndpoint = 'https://opleidingen.frissestart.nl/wp-json/wp/v2/opleidingen/table/opleidingen';
     
@@ -108,7 +177,7 @@ export async function getCourses(): Promise<Course[]> {
         console.log(`Successfully fetched ${response.data.length} courses from primary endpoint`);
         
         // Map de API-response naar onze Course interface
-        return response.data.map((course: any) => {
+        const mappedCourses = response.data.map((course: any) => {
           // Helper functie om de titel te extraheren
           const extractTitle = (titleData: any) => {
             if (typeof titleData === 'object' && titleData.rendered) {
@@ -146,6 +215,11 @@ export async function getCourses(): Promise<Course[]> {
             soobSubsidie: course.soob_subsidie || course.soobSubsidie || course.soob || course.subsidie || null,
           };
         });
+
+        // Write to cache
+        writeCoursesToCache(mappedCourses);
+        
+        return mappedCourses;
       }
     } catch (error) {
       console.log('Error fetching from primary endpoint:', error);
