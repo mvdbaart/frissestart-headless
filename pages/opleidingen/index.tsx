@@ -1,11 +1,43 @@
-import { GetStaticProps } from 'next';
+import { Html, Head, Main, NextScript } from 'next/document';
+
+export default function Document() {
+  return (
+    <Html lang="nl">
+      <Head>
+        {/* Favicon */}
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+        <meta name="theme-color" content="#FF8C00" /> {/* Using the orange color from the logo */}
+      </Head>
+      <body>
+        <Main />
+        <NextScript />
+      </body>
+    </Html>
+  );
+}{
+  "name": "Frisse Start Opleidingen",
+  "short_name": "Frisse Start",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "display": "standalone"
+}import { GetStaticProps } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
 import Layout from '../../components/Layout';
-import { getCourses, Course } from '../../lib/api';
-import { getStatusBadge, getAvailabilityText } from '../../lib/utils/courseUtils';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { getUpcomingCourses, Course } from '../../lib/api';
+import { useState } from 'react';
 
 interface OpleidingenProps {
   courses: Course[];
@@ -14,17 +46,13 @@ interface OpleidingenProps {
 export default function Opleidingen({ courses }: OpleidingenProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
-  const [visibleCourses, setVisibleCourses] = useState<Course[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const loaderRef = useRef<HTMLDivElement>(null);
-  const COURSES_PER_PAGE = 9;
   
   // Get unique categories
-  const categories = Array.from(new Set(courses.map(course => course.category)));
+  const categories = [...new Set(courses.map(course => course.category))];
   
   // Filter courses based on search term and selected category
   const filteredCourses = courses.filter(course => {
+    // Check if title and description are strings before using toLowerCase
     const titleStr = typeof course.title === 'string' ? course.title : '';
     const descriptionStr = typeof course.description === 'string' ? course.description : '';
     
@@ -35,64 +63,48 @@ export default function Opleidingen({ courses }: OpleidingenProps) {
     return matchesSearch && matchesCategory;
   });
 
-  // Load more courses when scrolling
-  const loadMoreCourses = useCallback(() => {
-    if (!hasMore) return;
+  // Function to get status badge
+  const getStatusBadge = (course: Course) => {
+    if (!course.status) return null;
     
-    const startIndex = (page - 1) * COURSES_PER_PAGE;
-    const endIndex = startIndex + COURSES_PER_PAGE;
-    const newCourses = filteredCourses.slice(startIndex, endIndex);
-    
-    if (newCourses.length > 0) {
-      console.log(`Loading more courses: ${newCourses.length} new courses from index ${startIndex} to ${endIndex}`);
-      setVisibleCourses(prev => [...prev, ...newCourses]);
-      setPage(prev => prev + 1);
-      setHasMore(endIndex < filteredCourses.length);
-    } else {
-      console.log('No more courses to load');
-      setHasMore(false);
+    switch(course.status) {
+      case 'vol':
+        return (
+          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+            Vol
+          </span>
+        );
+      case 'bijna_vol':
+        return (
+          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+            Bijna vol
+          </span>
+        );
+      case 'open':
+        return (
+          <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+            Beschikbaar
+          </span>
+        );
+      default:
+        return null;
     }
-  }, [filteredCourses, hasMore, page, COURSES_PER_PAGE]);
+  };
 
-  // Reset when filters change
-  useEffect(() => {
-    console.log(`Filters changed. Total filtered courses: ${filteredCourses.length}`);
-    setPage(1);
-    setVisibleCourses(filteredCourses.slice(0, COURSES_PER_PAGE));
-    setHasMore(COURSES_PER_PAGE < filteredCourses.length);
-  }, [searchTerm, selectedCategory, filteredCourses, COURSES_PER_PAGE]);
-
-  // Intersection Observer setup
-  useEffect(() => {
-    const options = {
-      root: null, // Use the viewport as the root
-      rootMargin: '100px',
-      threshold: 0.1
-    };
-
-    const handleObserver = (entries: IntersectionObserverEntry[]) => {
-      const [entry] = entries;
-      if (entry.isIntersecting && hasMore) {
-        console.log('Loader is visible, loading more courses...');
-        loadMoreCourses();
+  // Function to get availability text
+  const getAvailabilityText = (course: Course) => {
+    if (course.maxParticipants && course.currentParticipants !== undefined) {
+      const available = course.maxParticipants - course.currentParticipants;
+      if (available <= 0) {
+        return "Geen plaatsen beschikbaar";
+      } else if (available <= 3) {
+        return `Nog ${available} ${available === 1 ? 'plaats' : 'plaatsen'} beschikbaar`;
+      } else {
+        return `${available} plaatsen beschikbaar`;
       }
-    };
-
-    const observer = new IntersectionObserver(handleObserver, options);
-    
-    const currentLoader = loaderRef.current;
-    if (currentLoader) {
-      observer.observe(currentLoader);
-      console.log('Observer attached to loader element');
     }
-
-    return () => {
-      if (currentLoader) {
-        observer.unobserve(currentLoader);
-        console.log('Observer detached from loader element');
-      }
-    };
-  }, [hasMore, loadMoreCourses]);
+    return "";
+  };
 
   return (
     <Layout 
@@ -100,20 +112,8 @@ export default function Opleidingen({ courses }: OpleidingenProps) {
       description="Bekijk ons aanbod van aankomende professionele opleidingen en cursussen voor persoonlijke en professionele ontwikkeling."
     >
       {/* Hero Section */}
-      <section className="relative text-white py-20">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <Image
-            src="/images/header.jpg"
-            alt="Header background"
-            fill
-            className="object-cover"
-            priority
-          />
-          {/* Dark overlay for better text readability */}
-          <div className="absolute inset-0 bg-black opacity-50"></div>
-        </div>
-        
+      <section className="relative bg-primary text-white py-20">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary-dark opacity-90"></div>
         <div className="container mx-auto px-4 relative z-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -121,17 +121,17 @@ export default function Opleidingen({ courses }: OpleidingenProps) {
             transition={{ duration: 0.5 }}
             className="max-w-3xl mx-auto text-center"
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">
+            <h1 className="text-4xl md:text-5xl font-bold mb-6">
               Aankomende Opleidingen
             </h1>
-            <p className="text-xl mb-8 text-white">
+            <p className="text-xl mb-8">
               Ontdek ons uitgebreide aanbod van professionele opleidingen en cursussen voor persoonlijke en professionele ontwikkeling.
             </p>
           </motion.div>
         </div>
         
         {/* Wave SVG at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 z-10">
+        <div className="absolute bottom-0 left-0 right-0">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-auto">
             <path 
               fill="#ffffff" 
@@ -195,14 +195,8 @@ export default function Opleidingen({ courses }: OpleidingenProps) {
           <h2 className="text-3xl font-bold mb-8 text-text-dark">Aankomende Opleidingen</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {visibleCourses.map((course) => (
-              <motion.div
-                key={course.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-                className="bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col"
-              >
+            {filteredCourses.map((course) => (
+              <div key={course.id} className="bg-white rounded-lg shadow-md overflow-hidden h-full flex flex-col">
                 <div className="h-48 bg-gray-200 relative">
                   {course.image ? (
                     <Image
@@ -266,7 +260,7 @@ export default function Opleidingen({ courses }: OpleidingenProps) {
                     </div>
                   </div>
                   
-                  {course.soobSubsidie && course.soobSubsidie !== "0" && course.soobSubsidie !== "€ 0.00" && (
+                  {course.soobSubsidie && (
                     <div className="mb-4 bg-green-50 border border-green-200 rounded-md p-2 text-sm">
                       <div className="flex items-center text-green-800">
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -302,30 +296,11 @@ export default function Opleidingen({ courses }: OpleidingenProps) {
                     )}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             ))}
           </div>
           
-          {hasMore && (
-            <div className="flex flex-col items-center mt-8">
-              <div 
-                ref={loaderRef} 
-                className="flex justify-center items-center py-8"
-              >
-                <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-primary"></div>
-              </div>
-              
-              {/* Fallback button in case intersection observer doesn't work */}
-              <button
-                onClick={loadMoreCourses}
-                className="mt-4 bg-primary text-white px-6 py-3 rounded-md hover:bg-primary-dark transition-colors"
-              >
-                Meer opleidingen laden
-              </button>
-            </div>
-          )}
-          
-          {visibleCourses.length === 0 && (
+          {filteredCourses.length === 0 && (
             <div className="text-center py-8 bg-white rounded-lg shadow-md">
               <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -392,7 +367,7 @@ export default function Opleidingen({ courses }: OpleidingenProps) {
 }
 
 export const getStaticProps: GetStaticProps = async () => {
-  const courses = await getCourses();
+  const courses = await getUpcomingCourses();
 
   return {
     props: {
