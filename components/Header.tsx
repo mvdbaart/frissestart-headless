@@ -110,7 +110,7 @@ const Header: React.FC = () => {
           <div className="flex justify-between items-center">
             <Link href="/" className="flex items-center">
               <img 
-                src="https://opleidingen.frissestart.nl/wp-content/uploads/2023/04/logo.png" 
+                src="/images/logo.png" 
                 alt="Frisse Start Opleidingen" 
                 className="h-12 w-auto"
               />

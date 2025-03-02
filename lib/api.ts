@@ -23,17 +23,17 @@ export interface Course {
   slug: string;
   title: string;
   description: string;
-  image?: string;
+  image: string | null;
   category: string;
   status?: 'open' | 'bijna_vol' | 'vol';
-  maxParticipants?: number;
+  maxParticipants?: number | null;
   currentParticipants?: number;
-  tijd?: string;
-  duration?: string;
+  tijd?: string | null;
+  duration?: string | null;
   startDate: string;
   location: string;
   price: string;
-  soobSubsidie?: string;
+  soobSubsidie?: string | null;
 }
 
 // Page type definition
@@ -148,6 +148,118 @@ function writeCoursesToCache(courses: Course[]): void {
 }
 
 /**
+ * Fetch course details by ID
+ */
+async function getCourseDetails(courseId: string): Promise<any> {
+  try {
+    const response = await axios.get(`https://opleidingen.frissestart.nl/wp-json/opleidingen/v1/table/cursussen/${courseId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching course details for ID ${courseId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Fetch location details by ID
+ */
+async function getLocationDetails(locationId: string): Promise<any> {
+  try {
+    const response = await axios.get(`https://opleidingen.frissestart.nl/wp-json/opleidingen/v1/table/locaties/${locationId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching location details for ID ${locationId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Fetch all courses
+ */
+async function fetchAllCourses(): Promise<any[]> {
+  try {
+    const response = await axios.get('https://opleidingen.frissestart.nl/wp-json/opleidingen/v1/table/cursussen');
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching all courses:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch all locations
+ */
+async function fetchAllLocations(): Promise<any[]> {
+  try {
+    const response = await axios.get('https://opleidingen.frissestart.nl/wp-json/opleidingen/v1/table/locaties');
+    return response.data || [];
+  } catch (error) {
+    console.error('Error fetching all locations:', error);
+    return [];
+  }
+}
+
+/**
+ * Format time range
+ */
+function formatTimeRange(startTime: string, endTime: string): string {
+  if (!startTime || !endTime) return '';
+  
+  // Convert 24-hour format to readable format
+  const formatTime = (time: string) => {
+    const [hours, minutes] = time.split(':');
+    return `${hours}:${minutes}`;
+  };
+  
+  return `${formatTime(startTime)} - ${formatTime(endTime)}`;
+}
+
+/**
+ * Format date to "day, d month" format in Dutch
+ */
+function formatDate(dateString: string): string {
+  if (!dateString || dateString === 'Nader te bepalen') {
+    return 'Nader te bepalen';
+  }
+  
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString;
+    }
+    
+    // Dutch day names (abbreviated)
+    const dayNames = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+    
+    // Dutch month names (abbreviated)
+    const monthNames = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+    
+    const day = date.getDate();
+    const dayOfWeek = dayNames[date.getDay()];
+    const month = monthNames[date.getMonth()];
+    
+    return `${dayOfWeek}, ${day} ${month}`;
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return dateString;
+  }
+}
+
+/**
+ * Convert string to slug
+ */
+function slugify(text: string): string {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')        // Replace spaces with -
+    .replace(/&/g, '-and-')      // Replace & with 'and'
+    .replace(/[^\w\-]+/g, '')    // Remove all non-word characters
+    .replace(/\-\-+/g, '-');     // Replace multiple - with single -
+}
+
+/**
  * Fetch all courses from the WordPress API
  */
 export async function getCourses(): Promise<Course[]> {
@@ -176,44 +288,76 @@ export async function getCourses(): Promise<Course[]> {
       if (response.data && Array.isArray(response.data)) {
         console.log(`Successfully fetched ${response.data.length} courses from primary endpoint`);
         
-        // Map de API-response naar onze Course interface
+        // Fetch all courses and locations data in one go
+        const [allCourses, allLocations] = await Promise.all([
+          fetchAllCourses(),
+          fetchAllLocations()
+        ]);
+        
+        console.log(`Fetched ${allCourses.length} course details and ${allLocations.length} location details`);
+        
+        // Create lookup maps for faster access
+        const coursesMap = new Map();
+        const locationsMap = new Map();
+        
+        allCourses.forEach(course => {
+          coursesMap.set(course.id.toString(), course);
+        });
+        
+        allLocations.forEach(location => {
+          locationsMap.set(location.id.toString(), location);
+        });
+        
+        // Map the API-response to our Course interface
         const mappedCourses = response.data.map((course: any) => {
-          // Helper functie om de titel te extraheren
-          const extractTitle = (titleData: any) => {
-            if (typeof titleData === 'object' && titleData.rendered) {
-              return titleData.rendered;
-            }
-            if (typeof titleData === 'string') {
-              return titleData;
-            }
-            return '';
+          // Log raw course data for debugging
+          console.log('Raw course data:', JSON.stringify(course, null, 2));
+
+          // Get course and location details from maps
+          const courseDetails = coursesMap.get(course.cursus_id?.toString());
+          const locationDetails = locationsMap.get(course.locatie_id?.toString());
+          
+          console.log('Course details:', courseDetails);
+          console.log('Location details:', locationDetails);
+          
+          const title = courseDetails?.naam || '';
+          
+          // Extract slug from link if available, otherwise generate from title
+          let slug = '';
+          if (courseDetails?.link) {
+            // Remove domain from link to get the slug
+            const linkUrl = new URL(courseDetails.link);
+            slug = linkUrl.pathname.replace(/^\//, '').replace(/\/$/, ''); // Remove leading and trailing slashes
+          }
+          
+          // If no valid slug from link, generate from title
+          if (!slug) {
+            slug = title ? slugify(title) : `course-${course.id}`;
+          }
+
+          const mappedCourse = {
+            id: parseInt(course.id) || 0,
+            slug: slug,
+            title: title,
+            description: courseDetails?.beschrijving || '',
+            image: courseDetails?.afbeelding || null,
+            category: course.branche || 'Algemeen',
+            status: parseInt(course.aantal_gereserveerd) >= parseInt(course.maximum_aantal) ? 'vol' : 
+                   parseInt(course.aantal_gereserveerd) >= parseInt(course.maximum_aantal) * 0.8 ? 'bijna_vol' : 'open',
+            maxParticipants: parseInt(course.maximum_aantal) || null,
+            currentParticipants: parseInt(course.aantal_gereserveerd) || 0,
+            tijd: formatTimeRange(course.begintijd, course.eindtijd),
+            duration: null, // Als er een specifiek veld voor duur is, hier toevoegen
+            startDate: formatDate(course.datum) || 'Nader te bepalen',
+            location: locationDetails?.naam || 'Online',
+            price: course.verkoopprijs ? `€ ${parseFloat(course.verkoopprijs).toFixed(2)}` : 'Op aanvraag',
+            soobSubsidie: course.SOOB ? `€ ${parseFloat(course.SOOB).toFixed(2)}` : null,
           };
 
-          // Helper functie om de locatie te formatteren
-          const formatLocation = (loc: any) => {
-            if (!loc) return 'Online';
-            if (typeof loc === 'object' && loc.name) return loc.name;
-            if (typeof loc === 'string') return loc;
-            return 'Online';
-          };
+          // Log mapped course data for debugging
+          console.log('Mapped course:', JSON.stringify(mappedCourse, null, 2));
 
-          return {
-            id: course.id || course.ID || 0,
-            slug: course.slug || course.post_name || `course-${course.id || course.ID || 0}`,
-            title: extractTitle(course.title) || course.naam || course.post_title || '',
-            description: course.content?.rendered || course.description || course.post_content || course.beschrijving || '',
-            image: course.featured_image_url || course.image || course.thumbnail || course.afbeelding || null,
-            category: course.category || (course.categories && course.categories[0]?.name) || 'Algemeen',
-            status: course.status || 'open',
-            maxParticipants: course.max_participants || course.maxParticipants || course.maximum_deelnemers || null,
-            currentParticipants: course.current_participants || course.currentParticipants || course.huidige_deelnemers || 0,
-            tijd: course.tijd || course.time || course.aanvangstijd || course.starttijd || null,
-            duration: course.duration || course.duur || course.tijdsduur || null,
-            startDate: course.start_date || course.startDate || course.datum || course.startdatum || 'Nader te bepalen',
-            location: formatLocation(course.location || course.locatie || course.plaats || course.vestiging),
-            price: course.price || course.prijs || course.kosten || course.tarief || 'Op aanvraag',
-            soobSubsidie: course.soob_subsidie || course.soobSubsidie || course.soob || course.subsidie || null,
-          };
+          return mappedCourse;
         });
 
         // Write to cache
@@ -299,92 +443,17 @@ export async function getCourseBySlug(slug: string): Promise<Course | null> {
       return course;
     }
     
-    // Als de cursus niet gevonden is in de algemene lijst, probeer deze direct op te halen
-    const primaryEndpoint = 'https://opleidingen.frissestart.nl/wp-json/wp/v2/opleidingen/table/opleidingen';
+    // Als de cursus niet gevonden is, probeer alle cursussen opnieuw op te halen zonder cache
+    console.log(`Course with slug ${slug} not found in cache, fetching fresh data...`);
     
-    try {
-      // Probeer eerst alle cursussen op te halen en filter op slug
-      const response = await axios.get(primaryEndpoint, {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
-        }
-      });
-      
-      if (response.data && Array.isArray(response.data)) {
-        const matchingCourse = response.data.find((c: any) => c.slug === slug);
-        
-        if (matchingCourse) {
-          return {
-            id: matchingCourse.id || 0,
-            slug: matchingCourse.slug || slug,
-            title: matchingCourse.title || '',
-            description: matchingCourse.description || '',
-            image: matchingCourse.image || null,
-            category: matchingCourse.category || 'Algemeen',
-            status: matchingCourse.status || 'open',
-            maxParticipants: matchingCourse.max_participants || matchingCourse.maxParticipants || null,
-            currentParticipants: matchingCourse.current_participants || matchingCourse.currentParticipants || 0,
-            tijd: matchingCourse.tijd || null,
-            duration: matchingCourse.duration || null,
-            startDate: matchingCourse.start_date || matchingCourse.startDate || 'Nader te bepalen',
-            location: matchingCourse.location || matchingCourse.locatie || 'Online',
-            price: matchingCourse.price || matchingCourse.prijs || 'Op aanvraag',
-            soobSubsidie: matchingCourse.soob_subsidie || matchingCourse.soobSubsidie || null,
-          };
-        }
-      }
-    } catch (error) {
-      console.log(`Error fetching course with slug ${slug} from primary endpoint:`, error);
+    // Verwijder cache bestand als het bestaat
+    if (fs.existsSync(COURSES_CACHE_FILE)) {
+      fs.unlinkSync(COURSES_CACHE_FILE);
     }
     
-    // Probeer fallback endpoints als de primaire endpoint niet werkt
-    const fallbackEndpoints = [
-      `${REST_API_URL}/frisse-start/v1/opleidingen/${slug}`,
-      `${WP_API_URL}/opleidingen?slug=${slug}`,
-      `${CUSTOM_API_URL}/opleidingen/${slug}`
-    ];
-    
-    for (const endpoint of fallbackEndpoints) {
-      try {
-        const response = await axios.get(endpoint, {
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          },
-          timeout: 5000
-        });
-        
-        if (response.data) {
-          // Als de response een array is, neem het eerste item
-          const courseData = Array.isArray(response.data) ? response.data[0] : response.data;
-          
-          if (courseData) {
-            return {
-              id: courseData.id || courseData.ID || 0,
-              slug: courseData.slug || courseData.post_name || slug,
-              title: courseData.title?.rendered || courseData.title || courseData.post_title || '',
-              description: courseData.content?.rendered || courseData.description || courseData.post_content || '',
-              image: courseData.featured_image_url || courseData.image || courseData.thumbnail || null,
-              category: courseData.category || courseData.categories?.[0]?.name || 'Algemeen',
-              status: courseData.status || 'open',
-              maxParticipants: courseData.max_participants || courseData.maxParticipants || null,
-              currentParticipants: courseData.current_participants || courseData.currentParticipants || 0,
-              tijd: courseData.tijd || null,
-              duration: courseData.duration || null,
-              startDate: courseData.start_date || courseData.startDate || 'Nader te bepalen',
-              location: courseData.location || courseData.locatie || 'Online',
-              price: courseData.price || courseData.prijs || 'Op aanvraag',
-              soobSubsidie: courseData.soob_subsidie || courseData.soobSubsidie || null,
-            };
-          }
-        }
-      } catch (error) {
-        console.log(`Error fetching course with slug ${slug} from fallback endpoint:`, error);
-      }
-    }
-    
-    return null;
+    // Haal alle cursussen opnieuw op
+    const freshCourses = await getCourses();
+    return freshCourses.find(c => c.slug === slug) || null;
   } catch (error) {
     console.error(`Error fetching course with slug ${slug}:`, error);
     return null;

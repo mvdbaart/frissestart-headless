@@ -16,24 +16,36 @@ export default function Home({ featuredCourses }: HomeProps) {
       description="Frisse Start biedt professionele opleidingen en cursussen voor de transport- en logistieksector. Ontdek ons aanbod en start vandaag nog met jouw ontwikkeling."
     >
       {/* Hero Section */}
-      <section className="relative bg-primary text-white py-20 md:py-32">
-        <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary-dark opacity-90"></div>
+      <section className="relative text-white py-20 md:py-32">
+        {/* Background Image */}
+        <div className="absolute inset-0 z-0">
+          <Image
+            src="/images/header.jpg"
+            alt="Header background"
+            fill
+            className="object-cover"
+            priority
+          />
+          {/* Dark overlay for better text readability */}
+          <div className="absolute inset-0 bg-black opacity-50"></div>
+        </div>
+        
         <div className="container mx-auto px-4 relative z-10">
-          <div className="flex flex-col md:flex-row items-center">
-            <div className="md:w-1/2 mb-10 md:mb-0">
+          <div className="flex flex-col items-center">
+            <div className="w-full max-w-3xl text-center">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                <h1 className="text-4xl md:text-5xl font-bold mb-6">
+                <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">
                   Professionele Opleidingen voor Transport en Logistiek
                 </h1>
-                <p className="text-xl mb-8">
+                <p className="text-xl mb-8 text-white">
                   Ontwikkel jezelf en je team met onze erkende opleidingen en cursussen. 
                   100% SOOB-subsidie mogelijk.
                 </p>
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-wrap justify-center gap-4">
                   <Link 
                     href="/opleidingen" 
                     className="btn bg-white text-primary hover:bg-gray-100"
@@ -49,31 +61,11 @@ export default function Home({ featuredCourses }: HomeProps) {
                 </div>
               </motion.div>
             </div>
-            <div className="md:w-1/2">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.5, delay: 0.2 }}
-                className="relative"
-              >
-                <div className="bg-white p-2 rounded-lg shadow-xl">
-                  <img 
-                    src="https://opleidingen.frissestart.nl/wp-content/uploads/2023/04/hero-image.jpg" 
-                    alt="Transport en Logistiek Opleidingen" 
-                    className="rounded w-full h-auto"
-                  />
-                </div>
-                <div className="absolute -bottom-6 -right-6 bg-secondary text-white p-4 rounded-lg shadow-lg">
-                  <p className="font-bold">100% SOOB Garantie</p>
-                  <p className="text-sm">Voor erkende opleidingen</p>
-                </div>
-              </motion.div>
-            </div>
           </div>
         </div>
         
         {/* Wave SVG at bottom */}
-        <div className="absolute bottom-0 left-0 right-0">
+        <div className="absolute bottom-0 left-0 right-0 z-10">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 120" className="w-full h-auto">
             <path 
               fill="#ffffff" 
@@ -171,6 +163,24 @@ export default function Home({ featuredCourses }: HomeProps) {
                         <span className="text-white text-lg font-medium">Frisse Start</span>
                       </div>
                     )}
+                    {/* Status badge */}
+                    {course.status && (
+                      <div className="absolute top-2 right-2">
+                        <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          course.status === 'vol' 
+                            ? 'bg-red-100 text-red-800' 
+                            : course.status === 'bijna_vol' 
+                              ? 'bg-yellow-100 text-yellow-800' 
+                              : 'bg-green-100 text-green-800'
+                        }`}>
+                          {course.status === 'vol' 
+                            ? 'Vol' 
+                            : course.status === 'bijna_vol' 
+                              ? 'Bijna vol' 
+                              : 'Beschikbaar'}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="p-6 flex-grow flex flex-col">
@@ -190,13 +200,87 @@ export default function Home({ featuredCourses }: HomeProps) {
                         : ''}
                     </p>
                     
-                    <div className="mt-auto">
+                    {/* Course details */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm mb-4">
+                      {/* Date */}
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 text-primary mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-gray-700">{course.startDate || 'Flexibele startdatum'}</span>
+                      </div>
+                      
+                      {/* Time */}
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 text-primary mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-gray-700">
+                          {course.tijd ? `${course.tijd}${course.duration ? ` (${course.duration})` : ''}` : course.duration || 'Flexibele tijden'}
+                        </span>
+                      </div>
+                      
+                      {/* Location */}
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 text-primary mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="text-gray-700">{course.location || 'Diverse locaties'}</span>
+                      </div>
+                      
+                      {/* Price */}
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 text-primary mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="font-medium text-primary">{course.price || 'Op aanvraag'}</span>
+                      </div>
+                    </div>
+                    
+                    {/* SOOB Subsidy */}
+                    {course.soobSubsidie && (
+                      <div className="mb-4 bg-green-50 border border-green-200 rounded-md p-2 text-sm">
+                        <div className="flex items-center text-green-800">
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span className="font-medium">SOOB subsidie: {course.soobSubsidie}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Availability */}
+                    {course.maxParticipants && course.currentParticipants !== undefined && (
+                      <div className="text-xs text-gray-500 mb-4">
+                        {course.maxParticipants - course.currentParticipants <= 0
+                          ? "Geen plaatsen beschikbaar"
+                          : course.maxParticipants - course.currentParticipants <= 3
+                            ? `Nog ${course.maxParticipants - course.currentParticipants} ${course.maxParticipants - course.currentParticipants === 1 ? 'plaats' : 'plaatsen'} beschikbaar`
+                            : `${course.maxParticipants - course.currentParticipants} plaatsen beschikbaar`
+                        }
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-center mt-auto">
                       <Link 
                         href={`/opleidingen/${course.slug}`}
-                        className="block w-full bg-primary text-white text-center py-2 rounded-md hover:bg-primary-dark transition-colors"
+                        className="text-primary hover:text-primary-dark font-medium"
                       >
-                        Meer Informatie
+                        Meer info
                       </Link>
+                      {course.status === 'vol' ? (
+                        <span className="text-gray-400 cursor-not-allowed px-4 py-2 rounded-md bg-gray-100">
+                          Vol
+                        </span>
+                      ) : (
+                        <Link 
+                          href={`/opleidingen/${course.slug}#inschrijven`}
+                          className="bg-secondary text-white px-4 py-2 rounded-md hover:bg-secondary-dark transition-colors"
+                        >
+                          Inschrijven
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -1,6 +1,7 @@
 import React from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import Image from 'next/image';
 import Footer from './Footer';
 
 interface LayoutProps {
@@ -63,7 +64,13 @@ const Layout: React.FC<LayoutProps> = ({ children, title, description }) => {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center">
-              <img src="/images/logo.png" alt="Frisse Start" className="h-12" />
+              <Image 
+                src="/images/logo.png" 
+                alt="Frisse Start Logo" 
+                width={200} 
+                height={60} 
+                className="h-12 w-auto" 
+              />
             </Link>
             
             <div className="hidden md:flex items-center space-x-8">
