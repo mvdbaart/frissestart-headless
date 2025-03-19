@@ -1,37 +1,4 @@
-import { Html, Head, Main, NextScript } from 'next/document';
-
-export default function Document() {
-  return (
-    <Html lang="nl">
-      <Head>
-        {/* Favicon */}
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="manifest" href="/site.webmanifest" />
-        <meta name="theme-color" content="#FF8C00" /> {/* Using the orange color from the logo */}
-      </Head>
-      <body>
-        <Main />
-        <NextScript />
-      </body>
-    </Html>
-  );
-}{
-  "name": "Frisse Start Opleidingen",
-  "short_name": "Frisse Start",
-  "icons": [
-    {
-      "src": "/android-chrome-192x192.png",
-      "sizes": "192x192",
-      "type": "image/png"
-    }
-  ],
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
-  "display": "standalone"
-}import { GetStaticProps } from 'next';
+import { GetStaticProps } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';

@@ -52,7 +52,7 @@ const Header: React.FC = () => {
   return (
     <header>
       {/* Top advantages bar */}
-      <div className="bg-secondary text-white py-2">
+      <div className="bg-secondary text-white py-2 text-white">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-center md:justify-between items-center text-sm">
             <div className="hidden md:flex items-center space-x-1">
@@ -163,7 +163,7 @@ const Header: React.FC = () => {
                       className={`btn ${
                         isActive
                           ? 'bg-primary-dark text-white'
-                          : 'bg-primary text-white hover:bg-primary-dark'
+                          : 'bg-primary text-white hover:bg-primary-dark text-white'
                       }`}
                     >
                       {item.title}
@@ -202,7 +202,7 @@ const Header: React.FC = () => {
                     <Link 
                       key={item.ID}
                       href={url} 
-                      className="block py-2 px-4 bg-primary text-white rounded"
+                      className="block py-2 px-4 bg-primary text-white rounded text-white"
                     >
                       {item.title}
                     </Link>
