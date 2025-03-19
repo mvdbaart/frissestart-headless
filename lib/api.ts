@@ -37,6 +37,13 @@ export interface Course {
 }
 
 // Page type definition
+export interface Post {
+  id: number;
+  slug: string;
+  title: string;
+  content: string;
+}
+
 export interface Page {
   id: number;
   slug: string;
